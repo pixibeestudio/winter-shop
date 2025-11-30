@@ -32,11 +32,16 @@
              id="cartPanel">
             
             <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white">
-                <h2 class="text-lg font-bold text-gray-900">Shopping Cart <span class="text-gray-400 font-normal text-sm">(2 items)</span></h2>
+                <h2 class="text-lg font-bold text-gray-900">Shopping Cart</h2>
                 <button onclick="toggleCart(false)" class="p-2 hover:bg-gray-100 rounded-full transition-colors">
                     <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
+
+            <div id="cartContent" class="flex flex-col h-full">
+        {{-- Mặc định load lần đầu --}}
+        @include('partials.cart-sidebar', ['cart' => session()->get('cart', []), 'total' => 0])
+    </div>
 
             <div class="flex-1 overflow-y-auto p-6 space-y-6">
                 
@@ -120,6 +125,26 @@
                 }, 300);
             }
         }
+
+        function removeFromCart(key) {
+        if(!confirm('Remove this item?')) return;
+
+        fetch('{{ route('cart.remove') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ key: key })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                // Cập nhật lại HTML giỏ hàng
+                document.getElementById('cartContent').innerHTML = data.cart_html;
+            }
+        });
+    }
     </script>
 
 </body>

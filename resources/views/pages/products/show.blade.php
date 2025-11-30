@@ -248,33 +248,57 @@
     }
 
     function addToCart() {
-        // 1. Validate lần cuối
-        if(!currentSelection.color || !currentSelection.size) return;
+        if(!currentSelection.color || !currentSelection.size) {
+            alert('Please select Color and Size first!');
+            return;
+        }
 
-        // 2. Hiệu ứng Loading cho nút (UX Premium)
+        // 1. Loading Effect
         const btn = document.getElementById('addToCartBtn');
         const originalText = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Adding...`;
+        btn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" ...>...</svg> Adding...`; // (Giữ nguyên icon loading cũ của bạn)
 
-        // 3. Giả lập gọi API (AJAX) - Mất 1 giây
-        setTimeout(() => {
-            // Restore nút bấm
-            btn.innerHTML = "Added Successfully!";
-            btn.classList.replace('bg-brand-dark', 'bg-green-600'); // Đổi màu xanh báo thành công
-            
-            setTimeout(() => {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-                btn.classList.replace('bg-green-600', 'bg-brand-dark'); // Trả về màu cũ
+        // 2. Gửi dữ liệu lên Server
+        fetch('{{ route('cart.add') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}' // Bắt buộc để bảo mật trong Laravel
+            },
+            body: JSON.stringify({
+                id: 1, // ID sản phẩm (Đang fake là 1)
+                quantity: 1,
+                color: currentSelection.color,
+                size: currentSelection.size
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // 3. Xử lý khi thành công
+            if(data.success) {
+                // Update nút bấm
+                btn.innerHTML = "Added Successfully!";
+                btn.classList.replace('bg-brand-dark', 'bg-green-600');
                 
-                // 4. Mở Giỏ hàng slide-over ra
-                toggleCart(true); 
-            }, 800);
-            
-        }, 1000);
+                // CẬP NHẬT GIAO DIỆN GIỎ HÀNG BÊN PHẢI NGAY LẬP TỨC
+                document.getElementById('cartContent').innerHTML = data.cart_html;
 
-        // *Lưu ý: Ở bước sau, chúng ta sẽ thay đoạn setTimeout này bằng lệnh fetch('/cart/add') thật sự.
+                // Mở giỏ hàng ra
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                    btn.classList.replace('bg-green-600', 'bg-brand-dark');
+                    toggleCart(true);
+                }, 800);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            alert('Something went wrong!');
+        });
     }
 </script>
 @endpush
