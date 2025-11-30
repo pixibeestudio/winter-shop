@@ -6,6 +6,28 @@
     <div class="bg-gray-50 min-h-screen pb-20">
         <div class="container mx-auto px-6 pt-10">
 
+            <div class="mb-6">
+                {{-- 1. Nếu có lỗi Validate (Ví dụ: chưa nhập tên, email sai...) --}}
+                @if ($errors->any())
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                        <strong class="font-bold">Please fix the following errors:</strong>
+                        <ul class="mt-2 list-disc list-inside text-sm">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                {{-- 2. Nếu có lỗi hệ thống (Database lỗi, Code lỗi...) --}}
+                @if (session('error'))
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                        <strong class="font-bold">System Error:</strong>
+                        <span class="block sm:inline">{{ session('error') }}</span>
+                    </div>
+                @endif
+            </div>
+
             <div class="flex items-center justify-center mb-10">
                 <h1 class="text-3xl font-bold text-brand-dark">Checkout</h1>
             </div>
