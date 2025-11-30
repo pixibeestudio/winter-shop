@@ -3,90 +3,84 @@
 @section('title', $product->name . ' - Winter Store')
 
 @section('content')
-<div class="bg-white pb-20">
-    <div class="container mx-auto px-6 py-4">
+<div class="bg-white py-12">
+    <div class="container mx-auto px-6 mb-8">
         <nav class="flex text-sm text-gray-500 gap-2">
-            <a href="/" class="hover:text-brand-dark">Home</a>
-            <span>/</span>
-            <a href="#" class="hover:text-brand-dark">{{ $product->category }}</a>
-            <span>/</span>
-            <span class="text-brand-dark font-medium truncate">{{ $product->name }}</span>
+            <a href="/" class="hover:text-black transition-colors">Home</a> / 
+            <a href="{{ route('shop.index') }}" class="hover:text-black transition-colors">Shop</a> / 
+            <span class="text-black font-medium">{{ $product->name }}</span>
         </nav>
     </div>
 
-    <div class="container mx-auto px-6 mt-6">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20">
+    <div class="container mx-auto px-6">
+        <div class="flex flex-col lg:flex-row gap-12 lg:gap-16">
             
-            <div class="space-y-4">
-                <div class="relative bg-gray-50 rounded-2xl overflow-hidden aspect-[4/5] group cursor-zoom-in">
-                    <img id="mainImage" 
-                         src="{{ $images[0] }}" 
-                         alt="{{ $product->name }}" 
-                         class="w-full h-full object-contain object-center transition-transform duration-500 group-hover:scale-110">
+            <div class="lg:w-1/2 space-y-4">
+                <div class="relative bg-gray-100 rounded-lg overflow-hidden group cursor-zoom-in aspect-[4/5]">
+                    @php 
+                        $mainImg = $product->images->where('is_primary', 1)->first() ?? $product->images->first();
+                        $mainImgUrl = $mainImg ? $mainImg->image_path : 'https://via.placeholder.com/500';
+                    @endphp
+                    <img id="mainImage" src="{{ $mainImgUrl }}" alt="{{ $product->name }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
                     
-                    <span class="absolute top-4 left-4 bg-brand-dark text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                        New Arrival
-                    </span>
+                    @if($product->created_at->diffInDays(now()) < 7)
+                        <span class="absolute top-4 left-4 bg-red-600 text-white text-xs font-bold px-3 py-1 uppercase tracking-wider">New</span>
+                    @endif
                 </div>
 
-                <div class="grid grid-cols-4 gap-4">
-                    @foreach($images as $index => $img)
-                        <button onclick="changeImage('{{ $img }}')" 
-                                class="aspect-square rounded-xl bg-gray-50 border-2 {{ $index == 0 ? 'border-brand-dark' : 'border-transparent' }} hover:border-brand-dark transition-all overflow-hidden">
-                            <img src="{{ $img }}" class="w-full h-full object-contain p-2">
+                <div class="flex gap-4 overflow-x-auto pb-2">
+                    @foreach($product->images as $img)
+                        <button onclick="changeImage('{{ $img->image_path }}')" class="w-20 h-24 shrink-0 border border-transparent hover:border-black transition-all rounded-md overflow-hidden">
+                            <img src="{{ $img->image_path }}" class="w-full h-full object-cover">
                         </button>
                     @endforeach
                 </div>
             </div>
 
-            <div class="lg:sticky lg:top-24 h-fit">
-                <div class="mb-6">
-                    <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">{{ $product->name }}</h1>
-                    <div class="flex items-center gap-4">
-                        <div class="flex text-yellow-400 text-sm">
-                            ★★★★★ <span class="text-gray-400 ml-2">({{ $product->reviews_count }} Reviews)</span>
+            <div class="lg:w-1/2">
+                <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 font-serif">{{ $product->name }}</h1>
+                
+                <div class="flex items-center gap-6 mb-6">
+                    <span class="text-2xl font-bold text-gray-900" id="displayPrice">${{ number_format($product->base_price, 2) }}</span>
+                    
+                    <div class="flex items-center gap-2 border-l border-gray-300 pl-6">
+                        <div class="flex text-yellow-500 text-sm">
+                            @for($i=1; $i<=5; $i++)
+                                <span>{{ $i <= round($avgRating) ? '★' : '☆' }}</span>
+                            @endfor
                         </div>
-                        <span class="text-gray-300">|</span>
-                        <span class="text-green-600 font-medium text-sm">In Stock</span>
+                        <a href="#reviews" class="text-sm text-gray-500 hover:text-black underline">({{ $product->reviews_count }} customer reviews)</a>
                     </div>
                 </div>
 
-                <div class="mb-8">
-                    <span id="productPrice" class="text-3xl font-bold text-brand-dark">${{ number_format($product->price, 2) }}</span>
+                <div class="prose text-gray-600 mb-8 text-sm leading-relaxed">
+                    {{ Str::limit($product->description, 150) }}
                 </div>
 
-                <p class="text-gray-500 leading-relaxed mb-8">
-                    {{ $product->description }}
-                </p>
-
-                <div class="space-y-6 border-t border-b border-gray-100 py-6">
+                <div class="space-y-6 pb-8 border-b border-gray-100">
                     
                     <div>
-                        <label class="block text-sm font-bold text-gray-900 mb-3">Color: <span id="selectedColorName" class="font-normal text-gray-500">Select a color</span></label>
-                        <div class="flex gap-3">
+                        <span class="block text-sm font-bold text-gray-900 mb-3">Color: <span id="selectedColorName" class="font-normal text-gray-500 ml-1">Select a color</span></span>
+                        <div class="flex flex-wrap gap-3">
                             @foreach($colors as $color)
-                                @php
-                                    // Tìm mã hex của màu này trong mảng variants
-                                    $variantKey = array_search($color, array_column($variants, 'color'));
-                                    $hex = $variants[$variantKey]['color_code'];
-                                @endphp
                                 <button onclick="selectColor('{{ $color }}')" 
-                                        class="w-10 h-10 rounded-full border-2 border-transparent ring-2 ring-transparent focus:ring-brand-dark hover:scale-110 transition-all color-btn"
-                                        data-color="{{ $color }}"
-                                        style="background-color: {{ $hex }};"></button>
+                                        class="color-btn px-4 py-2 border border-gray-200 rounded-md text-sm hover:border-black hover:bg-gray-50 transition-all focus:ring-2 focus:ring-black focus:ring-offset-1"
+                                        data-color="{{ $color }}">
+                                    {{ $color }}
+                                </button>
                             @endforeach
                         </div>
                     </div>
 
                     <div>
                         <div class="flex justify-between mb-3">
-                            <label class="block text-sm font-bold text-gray-900">Size: <span id="selectedSizeName" class="font-normal text-gray-500"></span></label>
-                            <a href="#" class="text-xs text-brand-dark underline">Size Guide</a>
+                            <span class="block text-sm font-bold text-gray-900">Size: <span id="selectedSizeName" class="font-normal text-gray-500 ml-1"></span></span>
+                            <a href="#" class="text-xs text-gray-500 underline uppercase tracking-wide">Size Chart</a>
                         </div>
-                        <div class="grid grid-cols-4 gap-3" id="sizeContainer">
+                        <div class="flex flex-wrap gap-3">
                             @foreach($sizes as $size)
                                 <button onclick="selectSize('{{ $size }}')" 
-                                        class="border border-gray-200 rounded-lg py-3 text-sm font-medium hover:border-brand-dark transition-all size-btn"
+                                        class="size-btn w-12 h-10 border border-gray-200 rounded-md text-sm font-medium hover:border-black transition-all flex items-center justify-center disabled:opacity-20 disabled:cursor-not-allowed disabled:bg-gray-100"
                                         data-size="{{ $size }}">
                                     {{ $size }}
                                 </button>
@@ -95,209 +89,266 @@
                     </div>
                 </div>
 
-                <div class="mt-8 flex gap-4">
-                    <div class="flex items-center border border-gray-300 rounded-full w-32 px-4">
-                        <button class="text-gray-500 hover:text-brand-dark px-2">-</button>
-                        <input type="text" value="1" class="w-full text-center border-none focus:ring-0 font-bold text-gray-900">
-                        <button class="text-gray-500 hover:text-brand-dark px-2">+</button>
+                <div class="py-8 flex gap-4 items-center">
+                    <div class="flex items-center border border-gray-300 rounded-md h-12 w-32">
+                        <button class="w-10 h-full text-gray-600 hover:bg-gray-100 transition-colors text-xl font-light" onclick="updateQty(-1)">-</button>
+                        <input type="text" id="qtyInput" value="1" class="w-full h-full text-center border-none focus:ring-0 font-bold text-gray-900" readonly>
+                        <button class="w-10 h-full text-gray-600 hover:bg-gray-100 transition-colors text-xl font-light" onclick="updateQty(1)">+</button>
                     </div>
 
-                    <button id="addToCartBtn" onclick="addToCart()" class="flex-1 bg-brand-dark text-white rounded-full font-bold text-lg hover:bg-black transition-all shadow-xl hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed">
-                        Add to Cart - $<span id="btnPrice">{{ number_format($product->price, 2) }}</span>
+                    <button id="addToCartBtn" onclick="addToCart()" disabled 
+                            class="flex-1 bg-black text-white h-12 rounded-md font-bold uppercase tracking-widest text-sm hover:bg-gray-800 transition-all disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed shadow-lg">
+                        Select Options
                     </button>
-
-                    <button class="w-14 h-14 rounded-full border border-gray-200 flex items-center justify-center hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all">
+                    
+                    <button class="w-12 h-12 border border-gray-300 rounded-md flex items-center justify-center hover:border-red-500 hover:text-red-500 transition-colors text-gray-400">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                     </button>
                 </div>
-
-                <div class="mt-8 space-y-4 text-sm text-gray-500 bg-gray-50 p-4 rounded-xl">
-                    <div class="flex items-center gap-3">
-                        <svg class="w-5 h-5 text-brand-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
-                        <span>Free shipping on orders over $200</span>
+                
+                <div class="space-y-2 text-xs text-gray-500 uppercase tracking-wider">
+                    <p>SKU: <span id="skuDisplay" class="text-gray-900">N/A</span></p>
+                    <p>Category: <span class="text-gray-900">{{ $product->category->name }}</span></p>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-4 mt-8 pt-8 border-t border-gray-100">
+                    <div class="text-center">
+                        <svg class="w-6 h-6 mx-auto mb-2 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+                        <span class="text-xs font-bold text-gray-900">Free Shipping<br>Orders $99+</span>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <svg class="w-5 h-5 text-brand-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                        <span>30 days return policy</span>
+                    <div class="text-center">
+                        <svg class="w-6 h-6 mx-auto mb-2 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span class="text-xs font-bold text-gray-900">Delivery 2-3<br>Working Days</span>
+                    </div>
+                    <div class="text-center">
+                        <svg class="w-6 h-6 mx-auto mb-2 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        <span class="text-xs font-bold text-gray-900">Free Returns<br>& Exchange</span>
                     </div>
                 </div>
 
             </div>
         </div>
-        
-        <div class="mt-20 border-t border-gray-200 pt-10">
-             <h3 class="font-bold text-xl mb-4">Product Details</h3>
-             <div class="prose max-w-none text-gray-600">
-                 <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit...</p>
-             </div>
+
+        <div class="mt-20 border-t border-gray-200 pt-12" id="reviews">
+            <div class="flex justify-center gap-8 mb-12 border-b border-gray-200 pb-1">
+                <button class="pb-4 text-sm font-bold uppercase tracking-wider text-gray-400 hover:text-black transition-colors" onclick="switchTab('desc', this)">Description</button>
+                <button class="pb-4 text-sm font-bold uppercase tracking-wider border-b-2 border-black text-black" onclick="switchTab('reviews', this)">Reviews ({{ $product->reviews_count }})</button>
+            </div>
+
+            <div id="tab-desc" class="hidden max-w-3xl mx-auto text-gray-600 leading-relaxed text-center">
+                <p>{{ $product->description }}</p>
+                <p class="mt-4">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+            </div>
+
+            <div id="tab-reviews" class="max-w-4xl mx-auto">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    
+                    <div class="space-y-8">
+                        <h3 class="font-bold text-lg mb-6">{{ $product->reviews_count }} review(s) for {{ $product->name }}</h3>
+                        
+                        @forelse($product->reviews as $review)
+                            <div class="flex gap-4 border-b border-gray-100 pb-6 last:border-0">
+                                <div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-500 shrink-0">
+                                    {{ substr($review->user->name ?? 'User', 0, 1) }}
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <div class="flex text-yellow-500 text-xs">
+                                            @for($i=1; $i<=5; $i++) <span>{{ $i <= $review->rating ? '★' : '☆' }}</span> @endfor
+                                        </div>
+                                    </div>
+                                    <p class="font-bold text-sm text-gray-900">{{ $review->user->name ?? 'Guest' }} <span class="text-gray-400 font-normal ml-2 text-xs">| {{ $review->created_at->format('M d, Y') }}</span></p>
+                                    <p class="text-gray-600 text-sm mt-2">{{ $review->comment }}</p>
+                                </div>
+                            </div>
+                        @empty
+                            <p class="text-gray-500 italic">There are no reviews yet.</p>
+                        @endforelse
+                    </div>
+
+                    <div class="bg-gray-50 p-8 rounded-xl border border-gray-100 h-fit">
+                        <h3 class="font-bold text-lg mb-2">Add a review</h3>
+                        <p class="text-xs text-gray-500 mb-6">Your email address will not be published. Required fields are marked *</p>
+
+                        @auth
+                            <form action="{{ route('products.review', $product->id) }}" method="POST">
+                                @csrf
+                                <div class="mb-4">
+                                    <label class="block text-sm font-bold text-gray-700 mb-2">Your rating *</label>
+                                    <div class="flex flex-row-reverse justify-end gap-1 text-2xl text-gray-300 hover:text-yellow-400 cursor-pointer w-fit">
+                                        <input type="radio" name="rating" value="5" id="s5" class="peer hidden"><label for="s5" class="peer-checked:text-yellow-400 hover:text-yellow-400 transition-colors">★</label>
+                                        <input type="radio" name="rating" value="4" id="s4" class="peer hidden"><label for="s4" class="peer-checked:text-yellow-400 hover:text-yellow-400 transition-colors">★</label>
+                                        <input type="radio" name="rating" value="3" id="s3" class="peer hidden"><label for="s3" class="peer-checked:text-yellow-400 hover:text-yellow-400 transition-colors">★</label>
+                                        <input type="radio" name="rating" value="2" id="s2" class="peer hidden"><label for="s2" class="peer-checked:text-yellow-400 hover:text-yellow-400 transition-colors">★</label>
+                                        <input type="radio" name="rating" value="1" id="s1" class="peer hidden"><label for="s1" class="peer-checked:text-yellow-400 hover:text-yellow-400 transition-colors">★</label>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="block text-sm font-bold text-gray-700 mb-2">Your review *</label>
+                                    <textarea name="comment" rows="4" class="w-full border border-gray-300 rounded-md p-3 text-sm focus:ring-black focus:border-black" required placeholder="Write your thoughts here..."></textarea>
+                                </div>
+
+                                <button type="submit" class="w-full bg-black text-white py-3 rounded-md font-bold text-sm hover:bg-gray-800 transition-all uppercase tracking-widest">Submit Review</button>
+                            </form>
+                        @else
+                            <div class="text-center py-6">
+                                <p class="text-gray-600 mb-4">You must be logged in to post a review.</p>
+                                <a href="#" class="inline-block bg-black text-white px-6 py-2 rounded-md text-sm font-bold">Login Now</a>
+                            </div>
+                        @endauth
+                    </div>
+                </div>
+            </div>
         </div>
+
+        @if(session('success'))
+            <div class="fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-xl animate-bounce-slow z-50">
+                {{ session('success') }}
+            </div>
+        @endif
+        @if(session('error'))
+            <div class="fixed bottom-4 right-4 bg-red-600 text-white px-6 py-3 rounded-lg shadow-xl animate-bounce-slow z-50">
+                {{ session('error') }}
+            </div>
+        @endif
 
     </div>
 </div>
 
 @push('scripts')
 <script>
-    // 1. Dữ liệu từ Server đổ vào JS để xử lý Logic
-    const variants = @json($variants);
-    
-    let currentSelection = {
-        color: null,
-        size: null
-    };
+    // 1. Dữ liệu Variants từ Laravel -> JS
+    const variants = @json($product->variants);
+    let selected = { color: null, size: null };
 
-    // 2. Hàm đổi ảnh khi click thumbnail
-    function changeImage(src) {
-        document.getElementById('mainImage').src = src;
-        // Thêm hiệu ứng active cho thumbnail (bạn có thể tự code thêm class border)
+    // 2. JS đổi Tab
+    function switchTab(tabName, btn) {
+        document.getElementById('tab-desc').classList.add('hidden');
+        document.getElementById('tab-reviews').classList.add('hidden');
+        document.getElementById('tab-' + tabName).classList.remove('hidden');
+
+        // Reset style nút
+        btn.parentElement.querySelectorAll('button').forEach(b => {
+            b.classList.remove('border-b-2', 'border-black', 'text-black');
+            b.classList.add('text-gray-400');
+        });
+        btn.classList.remove('text-gray-400');
+        btn.classList.add('border-b-2', 'border-black', 'text-black');
     }
 
-    // 3. Hàm chọn Màu
+    // 3. Logic chọn biến thể (Giữ nguyên logic cũ nhưng cập nhật UI mới)
     function selectColor(color) {
-        currentSelection.color = color;
-        currentSelection.size = null; // Reset size khi đổi màu
+        selected.color = color;
+        selected.size = null; 
         
         // Update UI Text
         document.getElementById('selectedColorName').innerText = color;
         document.getElementById('selectedSizeName').innerText = '';
 
-        // Highlight nút màu được chọn
+        // Style Buttons
         document.querySelectorAll('.color-btn').forEach(btn => {
             if(btn.dataset.color === color) {
-                btn.classList.add('ring-2', 'ring-brand-dark', 'ring-offset-2');
+                btn.classList.add('border-black', 'bg-gray-50', 'ring-1', 'ring-black');
             } else {
-                btn.classList.remove('ring-2', 'ring-brand-dark', 'ring-offset-2');
+                btn.classList.remove('border-black', 'bg-gray-50', 'ring-1', 'ring-black');
             }
         });
 
-        // LỌC SIZE: Chỉ hiện những size có sẵn của màu này
-        const availableSizes = variants.filter(v => v.color === color).map(v => v.size);
-        
+        // Filter Sizes
+        const availableSizes = variants.filter(v => v.color === color && v.stock_quantity > 0).map(v => v.size);
         document.querySelectorAll('.size-btn').forEach(btn => {
             const size = btn.dataset.size;
+            btn.classList.remove('bg-black', 'text-white', 'border-black');
             
-            // Reset style
-            btn.classList.remove('bg-brand-dark', 'text-white', 'border-brand-dark');
-            btn.classList.add('border-gray-200');
-            
-            // Check disable logic
             if(availableSizes.includes(size)) {
                 btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-100');
             } else {
                 btn.disabled = true;
-                btn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-100');
             }
         });
 
-        updateAddToCartBtn();
+        checkSelection();
     }
 
-    // 4. Hàm chọn Size
     function selectSize(size) {
-        if(!currentSelection.color) {
-            alert('Please select a color first');
-            return;
-        }
-        currentSelection.size = size;
-        
-        // Update UI Text
+        if(!selected.color) return;
+        selected.size = size;
         document.getElementById('selectedSizeName').innerText = size;
 
-        // Highlight nút size
         document.querySelectorAll('.size-btn').forEach(btn => {
             if(btn.dataset.size === size) {
-                btn.classList.add('bg-brand-dark', 'text-white', 'border-brand-dark');
-                btn.classList.remove('border-gray-200');
+                btn.classList.add('bg-black', 'text-white', 'border-black');
             } else {
-                btn.classList.remove('bg-brand-dark', 'text-white', 'border-brand-dark');
-                btn.classList.add('border-gray-200');
+                btn.classList.remove('bg-black', 'text-white', 'border-black');
             }
         });
-
-        updatePrice();
-        updateAddToCartBtn();
+        checkSelection();
     }
 
-    // 5. Cập nhật giá và nút mua hàng
-    function updatePrice() {
-        // Tìm biến thể khớp với màu và size đã chọn
-        const variant = variants.find(v => v.color === currentSelection.color && v.size === currentSelection.size);
-        
-        if(variant) {
-            const priceFormatted = new Intl.NumberFormat('en-US', { style: 'decimal', minimumFractionDigits: 2 }).format(variant.price);
-            document.getElementById('productPrice').innerText = '$' + priceFormatted;
-            document.getElementById('btnPrice').innerText = priceFormatted;
-        }
-    }
-
-    function updateAddToCartBtn() {
+    function checkSelection() {
         const btn = document.getElementById('addToCartBtn');
-        if(currentSelection.color && currentSelection.size) {
-            // Kiểm tra tồn kho (Logic nâng cao)
-            const variant = variants.find(v => v.color === currentSelection.color && v.size === currentSelection.size);
-            if(variant && variant.stock > 0) {
-                btn.disabled = false;
-                btn.innerHTML = `Add to Cart - $${document.getElementById('btnPrice').innerText}`;
-            } else {
-                btn.disabled = true;
-                btn.innerText = 'Out of Stock';
+        const variant = variants.find(v => v.color === selected.color && v.size === selected.size);
+
+        if(variant) {
+            btn.disabled = false;
+            btn.innerText = "ADD TO CART";
+            document.getElementById('skuDisplay').innerText = variant.sku;
+            // Update Price (Nếu có logic giá theo size)
+            if(parseFloat(variant.price_adjustment) > 0) {
+                 // Logic cộng giá... (optional)
             }
         } else {
-            btn.disabled = true; // Chưa chọn đủ thì không cho mua
+            btn.disabled = true;
+            btn.innerText = selected.color ? "SELECT SIZE" : "SELECT OPTIONS";
         }
     }
 
+    function changeImage(src) {
+        document.getElementById('mainImage').src = src;
+    }
+    
+    function updateQty(change) {
+        let input = document.getElementById('qtyInput');
+        let newVal = parseInt(input.value) + change;
+        if(newVal >= 1) input.value = newVal;
+    }
+
+    // Hàm addToCart AJAX (Dùng lại hàm cũ của bạn, chỉ sửa id input)
     function addToCart() {
-        if(!currentSelection.color || !currentSelection.size) {
-            alert('Please select Color and Size first!');
-            return;
-        }
+        if(!selected.color || !selected.size) return;
 
-        // 1. Loading Effect
         const btn = document.getElementById('addToCartBtn');
-        const originalText = btn.innerHTML;
+        const originalText = btn.innerText;
         btn.disabled = true;
-        btn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" ...>...</svg> Adding...`; // (Giữ nguyên icon loading cũ của bạn)
+        btn.innerText = "ADDING...";
 
-        // 2. Gửi dữ liệu lên Server
         fetch('{{ route('cart.add') }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}' // Bắt buộc để bảo mật trong Laravel
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
             },
             body: JSON.stringify({
-                id: 1, // ID sản phẩm (Đang fake là 1)
-                quantity: 1,
-                color: currentSelection.color,
-                size: currentSelection.size
+                id: {{ $product->id }},
+                quantity: parseInt(document.getElementById('qtyInput').value),
+                color: selected.color,
+                size: selected.size
             })
         })
-        .then(response => response.json())
+        .then(res => res.json())
         .then(data => {
-            // 3. Xử lý khi thành công
             if(data.success) {
-                // Update nút bấm
-                btn.innerHTML = "Added Successfully!";
-                btn.classList.replace('bg-brand-dark', 'bg-green-600');
-                
-                // CẬP NHẬT GIAO DIỆN GIỎ HÀNG BÊN PHẢI NGAY LẬP TỨC
+                btn.innerText = "ADDED!";
+                btn.classList.replace('bg-black', 'bg-green-600');
                 document.getElementById('cartContent').innerHTML = data.cart_html;
-
-                // Mở giỏ hàng ra
                 setTimeout(() => {
+                    toggleCart(true); // Mở giỏ hàng
                     btn.disabled = false;
-                    btn.innerHTML = originalText;
-                    btn.classList.replace('bg-green-600', 'bg-brand-dark');
-                    toggleCart(true);
+                    btn.innerText = "ADD TO CART";
+                    btn.classList.replace('bg-green-600', 'bg-black');
                 }, 800);
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-            alert('Something went wrong!');
         });
     }
 </script>

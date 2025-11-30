@@ -3,74 +3,60 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Product;
+use App\Models\Review;
+use Illuminate\Support\Facades\Auth;
 
 class ProductController extends Controller
 {
     public function show($slug)
     {
-        // --- DỮ LIỆU GIẢ LẬP (MÔ PHỎNG DB) ---
-        // Sau này bạn sẽ thay bằng: $product = Product::with(['variants', 'images'])->where('slug', $slug)->firstOrFail();
-        
-        $product = (object) [
-            'id' => 1,
-            'name' => 'Premium Thermal Puffer Jacket',
-            'price' => 150.00, // Giá gốc
-            'description' => 'Áo khoác giữ nhiệt cao cấp với công nghệ chống nước IPX5. Lớp lót lông vũ tự nhiên giúp giữ ấm cơ thể ở nhiệt độ -10 độ C. Thiết kế form rộng trendy phù hợp cho cả nam và nữ.',
-            'rating' => 4.8,
-            'reviews_count' => 128,
-            'sku' => 'JK-WIN-2025',
-            'category' => 'Men / Jackets',
-        ];
+        // 1. Lấy sản phẩm từ DB kèm theo Quan hệ (Ảnh, Biến thể, Review, Danh mục)
+        $product = Product::with(['images', 'variants', 'category', 'reviews.user'])
+            ->withCount('reviews') // Đếm số review
+            ->where('slug', $slug)
+            ->where('is_active', 1)
+            ->firstOrFail();
 
-        // Giả lập danh sách ảnh
-        $images = [
-            'https://pngimg.com/d/jacket_PNG8038.png', // Ảnh chính (Màu xanh)
-            'https://pngimg.com/d/jacket_PNG8051.png', // Góc nghiêng
-            'https://pngimg.com/d/jacket_PNG8058.png', // Màu khác
-            'https://pngimg.com/d/jacket_PNG8048.png', // Chi tiết
-        ];
+        // 2. Tính điểm đánh giá trung bình
+        $avgRating = $product->reviews()->avg('rating') ?? 0;
 
-        // Giả lập Biến thể (Quan trọng để xử lý Logic JS)
-        // Logic: Màu Green có size M, L. Màu Black có size S, M.
-        $variants = [
-            [
-                'id' => 101,
-                'color' => 'Green',
-                'color_code' => '#40513B', // Mã màu để hiện cái chấm tròn
-                'size' => 'M',
-                'price' => 150.00,
-                'stock' => 10
-            ],
-            [
-                'id' => 102,
-                'color' => 'Green',
-                'color_code' => '#40513B',
-                'size' => 'L',
-                'price' => 155.00, // Size to đắt hơn xíu
-                'stock' => 5
-            ],
-            [
-                'id' => 103,
-                'color' => 'Black',
-                'color_code' => '#000000',
-                'size' => 'S',
-                'price' => 150.00,
-                'stock' => 0 // Hết hàng
-            ],
-            [
-                'id' => 104,
-                'color' => 'Black',
-                'color_code' => '#000000',
-                'size' => 'M',
-                'price' => 150.00,
-                'stock' => 20
-            ]
-        ];
+        // 3. Xử lý Biến thể để lấy ra danh sách Màu và Size duy nhất
+        // (Để hiển thị ra nút bấm cho khách chọn)
+        $colors = $product->variants->unique('color')->pluck('color'); // VD: ['Green', 'Black']
+        $sizes = $product->variants->unique('size')->pluck('size');    // VD: ['S', 'M', 'L']
 
-        // Lấy danh sách màu và size duy nhất để hiển thị ra nút bấm
-        $colors = array_unique(array_column($variants, 'color'));
-        $sizes = array_unique(array_column($variants, 'size'));
+        // 4. Lấy sản phẩm liên quan (Cùng danh mục)
+        $relatedProducts = Product::where('category_id', $product->category_id)
+            ->where('id', '!=', $product->id)
+            ->with('images')
+            ->take(4)
+            ->get();
 
-        return view('pages.products.show', compact('product', 'images', 'variants', 'colors', 'sizes'));
+        return view('pages.products.show', compact('product', 'colors', 'sizes', 'relatedProducts', 'avgRating'));
+    }
+
+    // Hàm lưu đánh giá mới
+    public function storeReview(Request $request, $id)
+    {
+        // Kiểm tra xem user đã đăng nhập chưa
+        if (!Auth::check()) {
+            return back()->with('error', 'You need to login to review this product.');
+        }
+
+        $request->validate([
+            'rating' => 'required|integer|min:1|max:5',
+            'comment' => 'required|string|min:5|max:500',
+        ]);
+
+        Review::create([
+            'user_id' => Auth::id(),
+            'product_id' => $id,
+            'rating' => $request->rating,
+            'comment' => $request->comment,
+            'is_approved' => 1 // Mặc định hiện luôn
+        ]);
+
+        return back()->with('success', 'Thank you for your review!');
     }
 }

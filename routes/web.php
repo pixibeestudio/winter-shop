@@ -24,3 +24,4 @@ Route::post('/checkout/place-order', [CheckoutController::class, 'store'])->name
 Route::get('/checkout/success/{order}', [CheckoutController::class, 'success'])->name('checkout.success');
 
 Route::get('/shop', [ShopController::class, 'index'])->name('shop.index');
+Route::post('/product/{id}/review', [ProductController::class, 'storeReview'])->name('products.review');
