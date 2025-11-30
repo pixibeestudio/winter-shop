@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Category; // <--- QUAN TRỌNG: Dòng này giúp sửa lỗi "Class not found"
 use Illuminate\Support\Facades\DB;
 
 class CheckoutController extends Controller
@@ -14,24 +15,26 @@ class CheckoutController extends Controller
         // 1. Lấy giỏ hàng
         $cart = session()->get('cart', []);
         
-        // 2. Nếu giỏ rỗng thì đá về trang chủ (không cho vào checkout)
+        // Nếu giỏ rỗng thì đá về trang chủ
         if(count($cart) < 1) {
             return redirect('/')->with('error', 'Your cart is empty');
         }
 
-        // 3. Tính tổng tiền
+        // 2. Tính tổng tiền
         $total = 0;
         foreach($cart as $item) {
             $total += $item['price'] * $item['quantity'];
         }
 
-        return view('pages.checkout.index', compact('cart', 'total'));
+        // 3. Lấy danh mục để hiển thị ở Header/Menu (Sửa lỗi Undefined variable $categories)
+        $categories = Category::withCount('products')->get();
+
+        return view('pages.checkout.index', compact('cart', 'total', 'categories'));
     }
 
-    // --- HÀM MỚI: XỬ LÝ LƯU ĐƠN HÀNG ---
+    // Xử lý lưu đơn hàng
     public function store(Request $request)
     {
-        // 1. Validate dữ liệu đầu vào (Bảo mật)
         $request->validate([
             'email' => 'required|email',
             'full_name' => 'required|min:3',
@@ -43,19 +46,17 @@ class CheckoutController extends Controller
         $cart = session()->get('cart', []);
         if(count($cart) < 1) return redirect()->route('checkout.index');
 
-        // Tính tổng tiền lại (để bảo mật, tránh user sửa HTML gửi giá 0đ lên)
         $totalAmount = 0;
         foreach($cart as $item) {
             $totalAmount += $item['price'] * $item['quantity'];
         }
 
-        // 2. Dùng DB Transaction (Đảm bảo lưu thành công cả Đơn và Chi tiết, nếu lỗi thì hoàn tác hết)
         try {
             DB::beginTransaction();
 
-            // A. Tạo Đơn hàng (Orders Table)
+            // A. Tạo Đơn hàng
             $order = new Order();
-            $order->user_id = auth()->id() ?? null; // Nếu có đăng nhập thì lưu ID
+            $order->user_id = auth()->id() ?? null;
             $order->full_name = $request->full_name;
             $order->email = $request->email;
             $order->phone = $request->phone;
@@ -65,7 +66,7 @@ class CheckoutController extends Controller
             $order->status = 'pending';
             $order->save();
 
-            // B. Tạo Chi tiết đơn hàng (Order Items Table)
+            // B. Tạo Chi tiết đơn hàng
             foreach($cart as $item) {
                 $orderItem = new OrderItem();
                 $orderItem->order_id = $order->id;
@@ -75,28 +76,29 @@ class CheckoutController extends Controller
                 $orderItem->quantity = $item['quantity'];
                 $orderItem->unit_price = $item['price'];
                 $orderItem->total_price = $item['price'] * $item['quantity'];
-                // $orderItem->product_variant_id = ... (Nếu bạn dùng DB thật thì query ID vào đây)
                 $orderItem->save();
             }
 
-            // C. Xóa giỏ hàng sau khi mua xong
+            // C. Xóa giỏ hàng
             session()->forget('cart');
 
-            DB::commit(); // Chốt đơn
+            DB::commit();
 
-            // 3. Chuyển hướng sang trang Success
             return redirect()->route('checkout.success', ['order' => $order->id]);
 
         } catch (\Exception $e) {
-            DB::rollBack(); // Có lỗi thì hủy hết
+            DB::rollBack();
             return back()->with('error', 'Something went wrong! ' . $e->getMessage());
         }
     }
 
-    // --- HÀM MỚI: HIỂN THỊ TRANG SUCCESS ---
+    // Trang thành công
     public function success($orderId)
     {
         $order = Order::findOrFail($orderId);
-        return view('pages.checkout.success', compact('order'));
+        // Cũng cần lấy category cho trang success để header không lỗi
+        $categories = Category::withCount('products')->get(); 
+        
+        return view('pages.checkout.success', compact('order', 'categories'));
     }
 }

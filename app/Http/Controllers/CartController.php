@@ -24,27 +24,31 @@ class CartController extends Controller
     // Thêm vào giỏ
     public function addToCart(Request $request)
     {
-        $id = $request->id; // ID sản phẩm
+        $id = $request->id;
         $color = $request->color;
         $size = $request->size;
         $quantity = $request->quantity;
-        
-        // --- LOGIC TÌM SẢN PHẨM (Mô phỏng vì bạn chưa nhập DB thật) ---
-        // Khi có DB thật bạn sẽ dùng: $product = Product::find($id);
-        // Ở đây mình fake dữ liệu giống bên ProductController để test chạy được luôn
-        $product = (object) [
-            'id' => 1,
-            'name' => 'Premium Thermal Puffer Jacket',
-            'price' => 150.00,
-            'image' => 'https://pngimg.com/d/jacket_PNG8038.png'
-        ];
-        // Nếu chọn Size L giá tăng lên (logic giống trang detail)
-        if($size == 'L') $product->price = 155.00; 
 
+        // 1. TÌM SẢN PHẨM THẬT TRONG DB (Kèm ảnh)
+        $product = Product::with('images')->find($id);
+
+        if(!$product) {
+            return response()->json(['success' => false, 'message' => 'Product not found']);
+        }
+
+        // 2. LẤY ẢNH CHÍNH CỦA SẢN PHẨM
+        // (Ưu tiên ảnh primary, nếu không có thì lấy ảnh đầu tiên, nếu không có nữa thì dùng ảnh rỗng)
+        $primaryImage = $product->images->where('is_primary', 1)->first();
+        $imageUrl = $primaryImage ? $primaryImage->image_path : ($product->images->first()->image_path ?? '');
+
+        // 3. Xử lý giá (Nếu size L, XL tăng giá - Logic ví dụ)
+        // Bạn có thể bỏ qua nếu không dùng logic tăng giá theo size
+        $price = $product->base_price; 
+        
         // --- XỬ LÝ SESSION CART ---
         $cart = session()->get('cart', []);
         
-        // Tạo key duy nhất cho sản phẩm theo biến thể (VD: 1_Green_M)
+        // Tạo key duy nhất: ID_Màu_Size
         $cartKey = $id . '_' . $color . '_' . $size;
 
         if(isset($cart[$cartKey])) {
@@ -54,8 +58,8 @@ class CartController extends Controller
                 "product_id" => $product->id,
                 "name" => $product->name,
                 "quantity" => $quantity,
-                "price" => $product->price,
-                "image" => $product->image,
+                "price" => $price,
+                "image" => $imageUrl, // <--- LƯU LINK ẢNH THẬT VÀO ĐÂY
                 "color" => $color,
                 "size" => $size
             ];
@@ -63,11 +67,10 @@ class CartController extends Controller
 
         session()->put('cart', $cart);
 
-        // Trả về HTML giỏ hàng mới nhất để JS cập nhật
         return response()->json([
             'success' => true,
             'cart_count' => count($cart),
-            'cart_html' => $this->index() // Gọi hàm index để lấy HTML mới
+            'cart_html' => $this->index() // Render lại HTML giỏ hàng
         ]);
     }
 
