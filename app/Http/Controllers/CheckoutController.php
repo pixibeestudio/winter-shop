@@ -5,7 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\Category; // <--- QUAN TRỌNG: Dòng này giúp sửa lỗi "Class not found"
+use App\Models\Category;
+use App\Models\Product; // <--- QUAN TRỌNG: Thêm dòng này để dùng được Product
 use Illuminate\Support\Facades\DB;
 
 class CheckoutController extends Controller
@@ -15,7 +16,6 @@ class CheckoutController extends Controller
         // 1. Lấy giỏ hàng
         $cart = session()->get('cart', []);
         
-        // Nếu giỏ rỗng thì đá về trang chủ
         if(count($cart) < 1) {
             return redirect('/')->with('error', 'Your cart is empty');
         }
@@ -26,13 +26,18 @@ class CheckoutController extends Controller
             $total += $item['price'] * $item['quantity'];
         }
 
-        // 3. Lấy danh mục để hiển thị ở Header/Menu (Sửa lỗi Undefined variable $categories)
+        // 3. Lấy danh mục (để header không lỗi)
         $categories = Category::withCount('products')->get();
 
-        return view('pages.checkout.index', compact('cart', 'total', 'categories'));
+        // 4. Lấy 3 sản phẩm mới nhất (ĐỂ SỬA LỖI "$products undefined" BẠN ĐANG GẶP)
+        // Chúng ta lấy 3 sản phẩm ngẫu nhiên hoặc mới nhất để hiển thị vào cái khung "Recent Products"
+        $products = Product::latest()->take(3)->get();
+
+        // Truyền đủ biến sang View: cart, total, categories VÀ products
+        return view('pages.checkout.index', compact('cart', 'total', 'categories', 'products'));
     }
 
-    // Xử lý lưu đơn hàng
+    // --- CÁC HÀM XỬ LÝ LƯU ĐƠN HÀNG (GIỮ NGUYÊN) ---
     public function store(Request $request)
     {
         $request->validate([
@@ -96,7 +101,6 @@ class CheckoutController extends Controller
     public function success($orderId)
     {
         $order = Order::findOrFail($orderId);
-        // Cũng cần lấy category cho trang success để header không lỗi
         $categories = Category::withCount('products')->get(); 
         
         return view('pages.checkout.success', compact('order', 'categories'));
