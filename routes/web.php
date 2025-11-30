@@ -19,3 +19,5 @@ Route::get('/cart/sidebar', [CartController::class, 'index'])->name('cart.sideba
 Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
 
 Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+Route::post('/checkout/place-order', [CheckoutController::class, 'store'])->name('checkout.store');
+Route::get('/checkout/success/{order}', [CheckoutController::class, 'success'])->name('checkout.success');
