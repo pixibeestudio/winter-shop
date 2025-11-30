@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\ShopController;
 
 Route::get('/', function () {
     // Trỏ vào file index nằm trong thư mục pages/home
@@ -21,3 +22,5 @@ Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remov
 Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
 Route::post('/checkout/place-order', [CheckoutController::class, 'store'])->name('checkout.store');
 Route::get('/checkout/success/{order}', [CheckoutController::class, 'success'])->name('checkout.success');
+
+Route::get('/shop', [ShopController::class, 'index'])->name('shop.index');
