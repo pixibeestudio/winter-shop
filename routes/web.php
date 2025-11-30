@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\CheckoutController;
 
 Route::get('/', function () {
     // Trỏ vào file index nằm trong thư mục pages/home
@@ -16,3 +17,5 @@ Route::get('/product/{slug}', [ProductController::class, 'show'])->name('product
 Route::post('/cart/add', [CartController::class, 'addToCart'])->name('cart.add');
 Route::get('/cart/sidebar', [CartController::class, 'index'])->name('cart.sidebar');
 Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
+
+Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
