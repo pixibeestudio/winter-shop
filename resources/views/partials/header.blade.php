@@ -31,10 +31,41 @@
                     class="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full">0</span>
             </button>
 
-            <button
-                class="hidden md:block bg-brand-dark text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-opacity-90 hover:shadow-lg transition-all">
-                Login
-            </button>
+            @auth
+                <div class="relative group">
+                    <button class="flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-black">
+                        <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                            {{ substr(Auth::user()->name, 0, 1) }}
+                        </div>
+                        <span class="hidden md:inline">{{ Auth::user()->name }}</span>
+                    </button>
+
+                    <div
+                        class="absolute right-0 top-full mt-2 w-48 bg-white shadow-xl rounded-lg py-2 hidden group-hover:block border border-gray-100">
+                        @if (Str::lower(Auth::user()->email) === 'admin@gmail.com')
+                            <a href="{{ route('admin.dashboard') }}"
+                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-brand-dark">Admin
+                                Dashboard</a>
+                        @endif
+                        <a href="#"
+                            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-brand-dark">My
+                            Orders</a>
+                        <a href="#"
+                            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-brand-dark">Profile</a>
+                        <div class="border-t border-gray-100 my-1"></div>
+                        <form action="{{ route('logout') }}" method="POST">
+                            @csrf
+                            <button type="submit"
+                                class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">Logout</button>
+                        </form>
+                    </div>
+                </div>
+            @else
+                <a href="{{ route('login') }}"
+                    class="hidden md:block bg-brand-dark text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-opacity-90 hover:shadow-lg transition-all">
+                    Login
+                </a>
+            @endauth
         </div>
     </div>
 </header>
