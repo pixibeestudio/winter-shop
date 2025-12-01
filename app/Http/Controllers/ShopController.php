@@ -13,6 +13,14 @@ class ShopController extends Controller
         // 1. Khởi tạo Query (Chưa lấy dữ liệu ngay)
         $query = Product::with(['category', 'images'])->where('is_active', 1);
 
+        if ($request->has('search') && $request->search != null) {
+            $searchTerm = $request->search;
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('name', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('description', 'LIKE', "%{$searchTerm}%");
+            });
+        }
+
         // 2. Lọc theo Danh mục (nếu có trên URL ?category=slug)
         if ($request->has('category') && $request->category != null) {
             $slug = $request->category;
